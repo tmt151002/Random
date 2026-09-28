@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vòng Quay Thứ Tự Thuyết Trình Trực Tuyến (1-15)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .pointer-shadow {
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    }
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-rose-500 selection:text-white">
+
+  <header class="border-b border-indigo-900/60 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-4 py-3">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-rose-500/20 text-white font-extrabold text-xl">
+          🎯
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold bg-gradient-to-r from-amber-200 via-rose-200 to-indigo-200 bg-clip-text text-transparent">
+              Thứ Tự Thuyết Trình
+            </h1>
+            <span id="syncStatusBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              Đồng bộ trực tuyến
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">15 số ngẫu nhiên • Tự động loại bỏ số đã bốc cho cả lớp</p>
+        </div>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2">
+        <button id="btnSoundToggle" class="px-2.5 py-1.5 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/80 text-xs font-semibold text-indigo-200 border border-indigo-700/50 flex items-center gap-1.5 transition">
+          <span id="soundIcon">🔊</span> <span class="hidden sm:inline">Âm thanh:</span> <span id="soundStatusText">Bật</span>
+        </button>
+        <button id="btnExportExcel" class="px-2.5 py-1.5 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/70 text-xs font-semibold text-emerald-200 border border-emerald-700/50 flex items-center gap-1 transition" title="Tải bảng danh sách về máy">
+          📥 Xuất Excel
+        </button>
+        <button id="btnOpenResetModal" class="px-2.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-xs font-semibold text-rose-200 border border-rose-700/50 flex items-center gap-1 transition" title="Chỉ dành cho Quản trị viên (Cần mã PIN)">
+          🔒 Đặt lại
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start my-auto">
+    
+    <!-- LEFT PANEL: Spin Area & Name Input -->
+    <div class="lg:col-span-7 flex flex-col items-center bg-slate-800/50 border border-indigo-900/50 rounded-3xl p-5 md:p-7 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+      <!-- Glow ambient background -->
+      <div class="absolute -top-24 -left-24 w-72 h-72 bg-rose-500/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Banner if user already spun -->
+      <div id="userSpunBanner" class="w-full max-w-md hidden mb-4 p-3.5 bg-gradient-to-r from-emerald-950/80 to-indigo-950/80 border border-emerald-500/50 rounded-2xl flex items-center gap-3 shadow-lg">
+        <span class="text-2xl">🎉</span>
+        <div class="text-xs">
+          <p class="font-bold text-emerald-300">Bạn đã hoàn thành lượt quay của mình!</p>
+          <p class="text-slate-300" id="userSpunDetails">Vị trí thuyết trình của bạn: Số <strong>--</strong></p>
+        </div>
+      </div>
+
+      <!-- Input Form: Select Member Name -->
+      <div id="inputFormContainer" class="w-full max-w-md z-10 mb-4">
+        <label for="selectName" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
+          <span>Bước 1: Chọn họ và tên của bạn</span>
+          <span class="text-[11px] text-amber-300 font-normal lowercase">(chọn đúng tên mình)</span>
+        </label>
+        <div class="relative">
+          <select 
+            id="selectName" 
+            class="w-full bg-slate-900 border-2 border-indigo-700/60 focus:border-rose-400 focus:outline-none rounded-2xl px-4 py-3 text-slate-100 font-medium transition duration-200 shadow-inner appearance-none cursor-pointer"
+          >
+            <option value="" disabled selected>-- Nhấn để chọn tên của bạn --</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+          <div id="nameValidationMsg" class="text-xs text-rose-400 mt-1.5 hidden font-medium flex items-center gap-1">
+            <span>⚠️</span> Vui lòng chọn tên của bạn trước khi bấm quay!
+          </div>
+        </div>
+      </div>
+
+      <div class="relative flex items-center justify-center my-2 z-10 w-full max-w-[360px] sm:max-w-[410px] aspect-square">
+        <!-- Top Indicator Arrow -->
+        <div class="absolute -top-3.5 z-30 pointer-events-none flex flex-col items-center">
+          <div class="w-7 h-9 bg-gradient-to-b from-amber-400 to-rose-600 rounded-b-md pointer-shadow transform rotate-180" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div>
+          <div class="w-3.5 h-3.5 bg-amber-300 rounded-full shadow-md -mt-1 border-2 border-slate-900"></div>
+        </div>
+
+        <!-- Wheel Canvas Container -->
+        <canvas id="wheelCanvas" class="w-full h-full rounded-full cursor-pointer shadow-2xl transition-transform active:scale-[0.99]"></canvas>
+
+        <!-- Center Spin Button -->
+        <button 
+          id="btnCenterSpin"
+          class="absolute z-20 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-400 text-white font-black text-sm sm:text-base tracking-wider uppercase shadow-xl hover:scale-105 active:scale-95 disabled:grayscale disabled:pointer-events-none transition flex flex-col items-center justify-center border-4 border-slate-900 cursor-pointer group"
+          title="Bấm để quay"
+        >
+          <span class="text-lg leading-none group-hover:rotate-12 transition transform" id="spinIcon">🎲</span>
+          <span id="spinButtonText">QUAY</span>
+        </button>
+      </div>
+
+      <!-- Real-time pool status counter -->
+      <div class="z-10 mt-4 flex items-center justify-between w-full max-w-md bg-slate-900/70 border border-slate-700/60 rounded-xl px-4 py-2.5 text-xs sm:text-sm">
+        <span class="text-slate-400">Số còn lại trong vòng:</span>
+        <div class="flex items-center gap-1.5 font-bold">
+          <span id="remainingBadge" class="px-2.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            15 / 15
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Presentation Schedule / Live Results -->
+    <div class="lg:col-span-5 flex flex-col bg-slate-800/50 border border-indigo-900/50 rounded-3xl p-5 md:p-6 backdrop-blur-xl shadow-2xl h-full">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700/50 mb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span>📋</span> Bảng Thứ Tự Thuyết Trình
+          </h2>
+          <p class="text-xs text-slate-400">Cập nhật trực tiếp từ số 01 đến 15</p>
+        </div>
+        <button 
+          id="btnCopyList" 
+          class="px-2.5 py-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-800/80 text-xs font-medium text-indigo-200 border border-indigo-700/40 transition flex items-center gap-1.5 active:scale-95"
+          title="Sao chép danh sách vào clipboard"
+        >
+          <span>📋</span> <span id="copyBtnText">Sao chép</span>
+        </button>
+      </div>
+
+      <!-- Slots List (1 to 15) -->
+      <div id="slotsContainer" class="flex-1 overflow-y-auto max-h-[500px] pr-1 space-y-2">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Footer Info -->
+      <div class="mt-4 pt-3 border-t border-slate-700/50 text-center text-xs text-slate-400">
+        💡 Mỗi người chỉ quay đúng 1 lần. Kết quả lập tức đồng bộ đến mọi thiết bị.
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: Celebration Result Pop-up -->
+  <div id="resultModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-400/60 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-300 relative overflow-hidden" id="resultModalBox">
+      <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-500/25 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="text-5xl mb-2 animate-bounce">🎉</div>
+      <h3 class="text-xs font-semibold tracking-wider uppercase text-amber-300">Kết Quả Bốc Thăm</h3>
+      
+      <p id="modalUserName" class="text-xl font-bold text-white mt-1 mb-2 truncate">Nguyễn Văn A</p>
+      
+      <div class="my-4 py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-indigo-500/20 border border-amber-400/40">
+        <span class="text-xs uppercase tracking-wider text-slate-300 font-semibold block">Thuyết trình ở vị trí số</span>
+        <span id="modalNumber" class="text-6xl font-black bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 bg-clip-text text-transparent">
+          --
+        </span>
+      </div>
+
+      <p class="text-xs text-slate-400 mb-5">
+        Số của bạn đã được ghi nhận vào bảng chung và loại bỏ khỏi vòng quay!
+      </p>
+
+      <button 
+        id="btnCloseResultModal" 
+        class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-bold text-sm tracking-wide shadow-lg shadow-rose-500/30 transition transform active:scale-98"
+      >
+        Xác nhận kết quả
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Admin PIN Protected Reset -->
+  <div id="adminResetModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-xs w-full text-center shadow-2xl relative" id="adminResetModalBox">
+      <h3 class="text-sm font-bold text-slate-200 mb-3">Nhập mã PIN</h3>
+
+      <div class="mb-4">
+        <input 
+          type="password" 
+          id="adminPinInput" 
+          maxlength="10"
+          placeholder="••••" 
+          class="w-full bg-slate-950 border border-slate-700 focus:border-rose-500 focus:outline-none rounded-xl px-4 py-2.5 text-center text-xl font-bold tracking-widest text-rose-300 placeholder:text-slate-600"
+          autocomplete="off"
+        />
+        <div id="pinErrorMsg" class="text-xs text-rose-400 mt-2 hidden font-medium">
+          Mã PIN không đúng!
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button 
+          id="btnCancelReset" 
+          class="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+        >
+          Hủy
+        </button>
+        <button 
+          id="btnConfirmReset" 
+          class="py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition shadow"
+        >
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none items-center"></div>
+
+  <!-- Footer -->
+  <footer class="py-3 text-center text-xs text-slate-500">
+    Hệ thống quay thứ tự ngẫu nhiên • Tự động đồng bộ và loại trừ số trực tiếp
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    /* Global Environment Config */
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'presentation-roulette-15';
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let isCloudMode = false;
+    let roomDocRef = null;
+
+    /* Palette for 15 sectors */
+    const sectorColors = [
+      '#EF4444', '#F97316', '#F59E0B', '#10B981', '#06B6D4',
+      '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#14B8A6',
+      '#E11D48', '#84CC16', '#0284C7', '#A855F7', '#D97706'
+    ];
+
+    /* Mã PIN Quản Trị - Chỉ bạn biết mã này */
+    const ADMIN_PIN = "8888";
+
+    /* Danh sách 15 bạn theo đúng hình ảnh cung cấp */
+    const MEMBERS_LIST = [
+      "Nguyễn Thị Kim Còn",
+      "Triệu Quốc Đạt",
+      "Đoàn Thị Thuỳ Dương",
+      "Nguyễn Anh Duy",
+      "Nguyễn Trường Kỳ",
+      "Nguyễn Lâm Nghiệp",
+      "Huỳnh Thanh Phong",
+      "Sơn Hoàng Nhật Tâm",
+      "Trương Minh Thạch",
+      "Nguyễn Thị Cẩm Thi",
+      "Nguyễn Thanh Thiên",
+      "Đặng Thị Bích Thư",
+      "Nguyễn Thị Anh Thư",
+      "Trần Thị Cẩm Tiên",
+      "Lê Thanh Tuyền"
+    ];
+
+    /* App State */
+    let remainingPool = Array.from({ length: 15 }, (_, i) => i + 1);
+    let activeWheelPool = [...remainingPool]; // Mảng số đang được vẽ trên bánh xe
+    let assignments = {};
+    for (let i = 1; i <= 15; i++) {
+      assignments[i] = null;
+    }
+
+    let userSpinResult = null; // Trạng thái đã quay của người dùng hiện tại
+    let isSpinning = false;
+    let pendingRemoteData = null; // Lưu dữ liệu đồng bộ khi đang quay để không làm lộ kết quả
+    let soundEnabled = true;
+    let synth = null;
+    let fanfareSynth = null;
+    let lastSeenUpdate = 0;
+
+    // Wheel Canvas Variables
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    let currentRotation = 0;
+    let lastTickSector = -1;
+
+    function initAudio() {
+      if (synth) return;
+      try {
+        Tone.start();
+        synth = new Tone.MembraneSynth({
+          pitchDecay: 0.05,
+          octaves: 3,
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.1 }
+        }).toDestination();
+        synth.volume.value = -8;
+
+        fanfareSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.02, decay: 0.2, sustain: 0.2, release: 0.5 }
+        }).toDestination();
+        fanfareSynth.volume.value = -6;
+      } catch (e) {
+        console.warn('Tone.js audio init', e);
+      }
+    }
+
+    function playTick() {
+      if (!soundEnabled || !synth) return;
+      try {
+        synth.triggerAttackRelease('C3', '32n', undefined, 0.4);
+      } catch(e) {}
+    }
+
+    function playFanfare() {
+      if (!soundEnabled || !fanfareSynth) return;
+      try {
+        const now = Tone.now();
+        fanfareSynth.triggerAttackRelease(['C4', 'E4', 'G4'], '8n', now);
+        fanfareSynth.triggerAttackRelease(['E4', 'G4', 'C5'], '4n', now + 0.15);
+      } catch(e) {}
+    }
+
+    async function initializeCloudSync() {
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          auth = getAuth(app);
+          db = getFirestore(app);
+
+          // Authenticate following mandatory rule
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            const credential = await signInWithCustomToken(auth, __initial_auth_token);
+            currentUser = credential.user;
+          } else {
+            const credential = await signInAnonymously(auth);
+            currentUser = credential.user;
+          }
+
+          if (currentUser) {
+            isCloudMode = true;
+            // Strict Path Rule: /artifacts/{appId}/public/data/{collectionName}
+            roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', 'default_presentation_room');
+
+            // Attach real-time snapshot with error callback
+            onSnapshot(roomDocRef, (docSnap) => {
+              if (docSnap.exists()) {
+                handleRemoteStateUpdate(docSnap.data());
+              } else {
+                // Initialize default room data if not present
+                const initialRoom = {
+                  remainingPool: Array.from({ length: 15 }, (_, i) => i + 1),
+                  assignments: {},
+                  lastSpin: null,
+                  updatedAt: Date.now()
+                };
+                for (let i = 1; i <= 15; i++) initialRoom.assignments[i] = null;
+                setDoc(roomDocRef, initialRoom).catch(console.error);
+              }
+            }, (error) => {
+              console.error("Firestore sync error:", error);
+              showToast("Đang chạy chế độ ngoại tuyến", "warning");
+            });
+
+            document.getElementById('syncStatusBadge').innerHTML = `
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Đồng bộ trực tuyến
+            `;
+          }
+        } else {
+          fallbackLocalMode();
+        }
+      } catch (err) {
+        console.warn("Falling back to local session state:", err);
+        fallbackLocalMode();
+      }
+    }
+
+    function fallbackLocalMode() {
+      isCloudMode = false;
+      document.getElementById('syncStatusBadge').innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        Chế độ cục bộ
+      `;
+      document.getElementById('syncStatusBadge').className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+    }
+
+    function updateMemberDropdown() {
+      const select = document.getElementById('selectName');
+      const currentValue = select.value;
+      
+      // Tập hợp các tên đã bốc thăm
+      const takenNames = new Set();
+      for (let i = 1; i <= 15; i++) {
+        if (assignments[i] && assignments[i].name) {
+          takenNames.add(assignments[i].name);
+        }
+      }
+
+      select.innerHTML = '<option value="" disabled ' + (!currentValue ? 'selected' : '') + '>-- Nhấn để chọn tên của bạn --</option>';
+
+      MEMBERS_LIST.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        const isTaken = takenNames.has(name);
+        if (isTaken) {
+          option.textContent = `🔒 ${name} (Đã quay)`;
+          option.disabled = true;
+          option.className = 'text-slate-500 bg-slate-900';
+        } else {
+          option.textContent = name;
+          option.className = 'text-slate-100 bg-slate-900 font-medium';
+        }
+        if (currentValue === name && !isTaken) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+
+      // Nếu tên đang chọn vừa bị ai khác quay mất
+      if (currentValue && takenNames.has(currentValue)) {
+        select.value = "";
+      }
+    }
+
+    function handleRemoteStateUpdate(data) {
+      if (!data) return;
+
+      // Nếu người dùng đang trong hiệu ứng quay, hoãn cập nhật để tạo sự bất ngờ
+      if (isSpinning) {
+        pendingRemoteData = data;
+        return;
+      }
+
+      const newPool = Array.isArray(data.remainingPool) ? data.remainingPool : [];
+      const newAssignments = data.assignments || {};
+
+      // Hiển thị thông báo khi có người khác vừa bốc trúng số
+      if (data.lastSpin && data.updatedAt && data.updatedAt > lastSeenUpdate) {
+        if (data.lastSpin.uid !== currentUser?.uid && lastSeenUpdate > 0) {
+          showToast(`✨ ${data.lastSpin.name} vừa bốc trúng số ${data.lastSpin.number < 10 ? '0' + data.lastSpin.number : data.lastSpin.number}!`, "info");
+        }
+        lastSeenUpdate = data.updatedAt;
+      }
+
+      // Kiểm tra nếu thiết bị hiện tại đã từng quay
+      const myId = currentUser?.uid;
+      let alreadySpun = null;
+      for (let i = 1; i <= 15; i++) {
+        if (newAssignments[i] && myId && newAssignments[i].uid === myId) {
+          alreadySpun = { number: i, ...newAssignments[i] };
+          break;
+        }
+      }
+
+      if (alreadySpun) {
+        userSpinResult = alreadySpun;
+        markUserAsCompleted(alreadySpun.number, alreadySpun.name);
+      } else {
+        userSpinResult = null;
+        enableSpinForm();
+      }
+
+      remainingPool = newPool;
+      activeWheelPool = [...remainingPool];
+      assignments = newAssignments;
+
+      updateMemberDropdown();
+      updateRemainingBadge();
+      renderSlotsList();
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+
+      // Bảo vệ: Nếu kích thước chưa sẵn sàng hoặc quá nhỏ, dừng lại để tránh lỗi arc
+      if (width <= 30 || height <= 30) return;
+
+      // Đảm bảo radius luôn dương tối thiểu là 10px
+      const radius = Math.max(10, Math.min(width, height) / 2 - 14);
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      // Nếu đã hết số
+      if (activeWheelPool.length === 0) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 15px Plus Jakarta Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ĐÃ HOÀN TẤT 15 SỐ', centerX, centerY);
+        ctx.restore();
+        return;
+      }
+
+      const totalSegments = activeWheelPool.length;
+      const arcSize = (2 * Math.PI) / totalSegments;
+
+      // Vòng viền ngoài
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, Math.max(10, radius + 8), 0, 2 * Math.PI);
+      ctx.fillStyle = '#090d16';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#4338ca';
+      ctx.stroke();
+
+      // Vẽ từng cung số
+      for (let i = 0; i < totalSegments; i++) {
+        const angle = currentRotation + i * arcSize;
+        const number = activeWheelPool[i];
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+        ctx.closePath();
+
+        ctx.fillStyle = sectorColors[(number - 1) % sectorColors.length];
+        ctx.fill();
+
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#0f172a';
+        ctx.stroke();
+
+        // Chữ số
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+
+        const fontSize = totalSegments > 10 ? 17 : (totalSegments > 5 ? 21 : 25);
+        ctx.font = `800 ${fontSize}px Plus Jakarta Sans, sans-serif`;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(number.toString(), Math.max(10, radius - 18), 0);
+        ctx.restore();
+      }
+
+      // Đèn trang trí xung quanh
+      const studs = 30;
+      for (let s = 0; s < studs; s++) {
+        const studAngle = (2 * Math.PI / studs) * s;
+        const sx = centerX + (radius + 4) * Math.cos(studAngle);
+        const sy = centerY + (radius + 4) * Math.sin(studAngle);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = s % 2 === 0 ? '#fde047' : '#ffffff';
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const parent = canvas.parentElement;
+      const parentRect = parent ? parent.getBoundingClientRect() : null;
+
+      // Lấy kích thước thực tế hoặc kích thước từ thẻ cha / mặc định 360px
+      const displayWidth = rect.width > 30 ? rect.width : (parentRect && parentRect.width > 30 ? parentRect.width : 360);
+      const displayHeight = rect.height > 30 ? rect.height : (parentRect && parentRect.height > 30 ? parentRect.height : 360);
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(displayWidth * dpr);
+      canvas.height = Math.round(displayHeight * dpr);
+      drawWheel();
+    }
+
+    function markUserAsCompleted(number, name) {
+      document.getElementById('inputFormContainer').classList.add('hidden');
+      const banner = document.getElementById('userSpunBanner');
+      banner.classList.remove('hidden');
+      const numStr = number < 10 ? '0' + number : number;
+      document.getElementById('userSpunDetails').innerHTML = `Vị trí thuyết trình của bạn: Số <strong class="text-amber-300 font-bold text-sm">#${numStr}</strong> (${escapeHtml(name)})`;
+      const spinBtn = document.getElementById('btnCenterSpin');
+      spinBtn.disabled = true;
+      document.getElementById('spinButtonText').textContent = 'ĐÃ BỐC';
+    }
+
+    function enableSpinForm() {
+      document.getElementById('inputFormContainer').classList.remove('hidden');
+      document.getElementById('userSpunBanner').classList.add('hidden');
+      const spinBtn = document.getElementById('btnCenterSpin');
+      spinBtn.disabled = remainingPool.length === 0;
+      document.getElementById('spinButtonText').textContent = 'QUAY';
+      const selectElement = document.getElementById('selectName');
+      if (selectElement) selectElement.disabled = false;
+    }
+
+    function renderSlotsList() {
+      const container = document.getElementById('slotsContainer');
+      if (!container) return;
+
+      let html = '';
+      for (let i = 1; i <= 15; i++) {
+        const item = assignments[i];
+        const numStr = i < 10 ? '0' + i : i;
+        const isCurrentSlot = userSpinResult && userSpinResult.number === i;
+
+        if (item && item.name) {
+          html += `
+            <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${
+              isCurrentSlot 
+                ? 'bg-amber-500/15 border-amber-400/60 shadow-md ring-1 ring-amber-400/40' 
+                : 'bg-slate-900/60 border-slate-700/60'
+            }">
+              <div class="flex items-center space-x-2.5 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 flex items-center justify-center font-black text-xs shrink-0">
+                  #${numStr}
+                </span>
+                <span class="font-bold text-sm text-slate-100 truncate ${isCurrentSlot ? 'text-amber-200' : ''}">
+                  ${escapeHtml(item.name)}
+                </span>
+                ${isCurrentSlot ? '<span class="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-1.5 py-0.5 rounded-full uppercase shrink-0">Bạn</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400 shrink-0 font-mono ml-2">
+                ${item.time || ''}
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/30 border border-dashed border-slate-700/40 text-slate-500">
+              <div class="flex items-center space-x-2.5">
+                <span class="w-8 h-8 rounded-lg bg-slate-800/60 text-slate-500 border border-slate-700/40 flex items-center justify-center font-bold text-xs shrink-0">
+                  #${numStr}
+                </span>
+                <span class="text-xs italic">Chưa có người bốc...</span>
+              </div>
+              <span class="text-[10px] text-slate-600 font-medium">Trống</span>
+            </div>
+          `;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    async function startSpin() {
+      if (isSpinning) return;
+
+      if (userSpinResult) {
+        showToast("Bạn đã quay rồi, mỗi người chỉ được quay 1 lần!", "warning");
+        return;
+      }
+
+      const selectElement = document.getElementById('selectName');
+      const userName = selectElement.value;
+      const validationMsg = document.getElementById('nameValidationMsg');
+
+      if (!userName) {
+        validationMsg.classList.remove('hidden');
+        selectElement.focus();
+        selectElement.classList.add('border-rose-500', 'animate-pulse');
+        setTimeout(() => selectElement.classList.remove('animate-pulse'), 800);
+        return;
+      }
+      validationMsg.classList.add('hidden');
+      selectElement.classList.remove('border-rose-500');
+
+      if (remainingPool.length === 0) {
+        showToast("Tất cả 15 số đã được quay xong!", "warning");
+        return;
+      }
+
+      initAudio();
+      isSpinning = true;
+      document.getElementById('btnCenterSpin').disabled = true;
+      selectElement.disabled = true;
+
+      let chosenNumber = null;
+      let chosenPoolIndex = -1;
+      let poolBeforeSpin = [...remainingPool];
+
+      // If online cloud mode is active, reserve via atomic transaction
+      if (isCloudMode && roomDocRef && currentUser) {
+        try {
+          const transactionResult = await runTransaction(db, async (transaction) => {
+            const sfDoc = await transaction.get(roomDocRef);
+            if (!sfDoc.exists()) {
+              throw new Error("Phòng quay chưa được khởi tạo!");
+            }
+            const data = sfDoc.data();
+            const currentPool = data.remainingPool || [];
+            const currentAssignments = data.assignments || {};
+
+            // Check if user has already spun by device or by name
+            for (let k = 1; k <= 15; k++) {
+              if (currentAssignments[k] && currentAssignments[k].uid === currentUser.uid) {
+                throw new Error("ALREADY_SPUN");
+              }
+              if (currentAssignments[k] && currentAssignments[k].name === userName) {
+                throw new Error("NAME_ALREADY_TAKEN");
+              }
+            }
+
+            if (currentPool.length === 0) {
+              throw new Error("POOL_EMPTY");
+            }
+
+            // Pick random number from remaining
+            const randIdx = Math.floor(Math.random() * currentPool.length);
+            const picked = currentPool[randIdx];
+            const updatedPool = currentPool.filter(n => n !== picked);
+
+            const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            currentAssignments[picked] = {
+              name: userName,
+              time: timeStr,
+              uid: currentUser.uid,
+              timestamp: Date.now()
+            };
+
+            transaction.update(roomDocRef, {
+              remainingPool: updatedPool,
+              assignments: currentAssignments,
+              lastSpin: {
+                name: userName,
+                number: picked,
+                uid: currentUser.uid
+              },
+              updatedAt: Date.now()
+            });
+
+            return {
+              number: picked,
+              poolBefore: currentPool
+            };
+          });
+
+          chosenNumber = transactionResult.number;
+          poolBeforeSpin = transactionResult.poolBefore;
+          chosenPoolIndex = poolBeforeSpin.indexOf(chosenNumber);
+        } catch (err) {
+          isSpinning = false;
+          selectElement.disabled = false;
+          document.getElementById('btnCenterSpin').disabled = false;
+          if (err.message === "ALREADY_SPUN") {
+            showToast("Bạn đã có lượt quay trước đó!", "warning");
+          } else if (err.message === "NAME_ALREADY_TAKEN") {
+            showToast("Tên này đã được quay bởi người khác!", "warning");
+            updateMemberDropdown();
+          } else if (err.message === "POOL_EMPTY") {
+            showToast("Vòng quay đã hết số!", "warning");
+          } else {
+            console.error("Spin transaction failed:", err);
+            showToast("Đã xảy ra lỗi kết nối, vui lòng thử lại.", "error");
+          }
+          return;
+        }
+      } else {
+        // Fallback local mode
+        chosenPoolIndex = Math.floor(Math.random() * remainingPool.length);
+        chosenNumber = remainingPool[chosenPoolIndex];
+        poolBeforeSpin = [...remainingPool];
+      }
+
+      // Giữ nguyên trạng thái các ô số trên bánh xe trong suốt quá trình quay
+      activeWheelPool = [...poolBeforeSpin];
+      animateRouletteWheel(chosenPoolIndex, poolBeforeSpin, chosenNumber, userName);
+    }
+
+    function animateRouletteWheel(chosenPoolIndex, poolState, chosenNumber, userName) {
+      const totalSegments = poolState.length;
+      const arcSize = (2 * Math.PI) / totalSegments;
+      const pointerAngle = 1.5 * Math.PI; // Mũi tên chỉ ở đỉnh trên (270 độ)
+      
+      const sectorCenterAtZero = chosenPoolIndex * arcSize + (arcSize / 2);
+      let desiredNormalized = (pointerAngle - sectorCenterAtZero) % (2 * Math.PI);
+      if (desiredNormalized < 0) desiredNormalized += 2 * Math.PI;
+
+      const currentNormalized = currentRotation % (2 * Math.PI);
+      let diff = desiredNormalized - currentNormalized;
+      if (diff < 0) diff += 2 * Math.PI;
+
+      // Quay 6 đến 8 vòng đầy đủ tạo kịch tính
+      const fullRotations = (6 + Math.floor(Math.random() * 3)) * (2 * Math.PI);
+      const safeMarginOffset = (Math.random() - 0.5) * (arcSize * 0.4);
+      const totalSpinAngle = fullRotations + diff + safeMarginOffset;
+
+      const startRotation = currentRotation;
+      const duration = 4800;
+      const startTime = performance.now();
+
+      function easeOutCubic(t) {
+        return (--t) * t * t + 1;
+      }
+
+      function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easedProgress = easeOutCubic(progress);
+
+        currentRotation = startRotation + totalSpinAngle * easedProgress;
+
+        // Âm thanh tạch tạch theo từng cung số
+        const currentNormRot = (currentRotation % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+        const activeSector = Math.floor(((pointerAngle - currentNormRot + 2 * Math.PI) % (2 * Math.PI)) / arcSize);
+        if (activeSector !== lastTickSector) {
+          playTick();
+          lastTickSector = activeSector;
+        }
+
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          isSpinning = false;
+          finishSpin(chosenNumber, userName, poolState);
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    function finishSpin(chosenNumber, userName, poolBefore) {
+      // Cập nhật trạng thái cục bộ nếu ngoại tuyến
+      if (!isCloudMode) {
+        const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        assignments[chosenNumber] = { name: userName, time: timeStr };
+        remainingPool = remainingPool.filter(n => n !== chosenNumber);
+        activeWheelPool = [...remainingPool];
+        updateMemberDropdown();
+        updateRemainingBadge();
+        renderSlotsList();
+      }
+
+      userSpinResult = { number: chosenNumber, name: userName };
+      markUserAsCompleted(chosenNumber, userName);
+
+      playFanfare();
+      triggerConfetti();
+      showResultModal(userName, chosenNumber);
+
+      // Nếu có cập nhật từ đám mây nhận được trong lúc đang quay, áp dụng ngay
+      if (pendingRemoteData) {
+        const data = pendingRemoteData;
+        pendingRemoteData = null;
+        handleRemoteStateUpdate(data);
+      } else {
+        activeWheelPool = [...remainingPool];
+        drawWheel();
+      }
+    }
+
+    function updateRemainingBadge() {
+      const count = remainingPool.length;
+      const badge = document.getElementById('remainingBadge');
+      badge.textContent = `${count} / 15`;
+      if (count === 0) {
+        badge.className = 'px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold';
+      } else {
+        badge.className = 'px-2.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold';
+      }
+    }
+
+    function copySchedule() {
+      let text = '🎯 DANH SÁCH THỨ TỰ THUYẾT TRÌNH (1-15)\n-----------------------------\n';
+      for (let i = 1; i <= 15; i++) {
+        const item = assignments[i];
+        const numStr = i < 10 ? '0' + i : i;
+        text += `Vị trí #${numStr}: ${item ? item.name : '(Chưa bốc)'}\n`;
+      }
+
+      // Safe clipboard execution for sandbox
+      const tempArea = document.createElement('textarea');
+      tempArea.value = text;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        const copyBtnText = document.getElementById('copyBtnText');
+        copyBtnText.textContent = 'Đã chép!';
+        setTimeout(() => { copyBtnText.textContent = 'Sao chép'; }, 2000);
+        showToast("Đã sao chép danh sách vào bộ nhớ tạm!", "info");
+      } catch (err) {
+        console.error('Copy failed', err);
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    function exportToExcelCSV() {
+      let csvContent = "\uFEFF"; // UTF-8 BOM for proper Vietnamese diacritics in Excel
+      csvContent += "Thứ tự thuyết trình,Họ và tên,Thời gian bốc,Trạng thái\n";
+
+      for (let i = 1; i <= 15; i++) {
+        const item = assignments[i];
+        const numStr = i < 10 ? '0' + i : i;
+        const name = item ? `"${item.name.replace(/"/g, '""')}"` : "Chưa bốc";
+        const time = item?.time ? `"${item.time}"` : "-";
+        const status = item ? "Đã chốt" : "Đang chờ";
+        csvContent += `Số ${numStr},${name},${time},${status}\n`;
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Thu_tu_thuyet_trinh_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast("Đã xuất danh sách Excel/CSV thành công!", "info");
+    }
+
+    function showResultModal(name, number) {
+      const modal = document.getElementById('resultModal');
+      const box = document.getElementById('resultModalBox');
+      document.getElementById('modalUserName').textContent = name;
+      document.getElementById('modalNumber').textContent = number < 10 ? '0' + number : number;
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95');
+        box.classList.add('scale-100');
+      }, 10);
+    }
+
+    function closeResultModal() {
+      const modal = document.getElementById('resultModal');
+      const box = document.getElementById('resultModalBox');
+      modal.classList.add('opacity-0');
+      box.classList.remove('scale-100');
+      box.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    /* Modal Quản Trị Viên & Đặt Lại */
+    function openAdminResetModal() {
+      const modal = document.getElementById('adminResetModal');
+      const pinInput = document.getElementById('adminPinInput');
+      const errorMsg = document.getElementById('pinErrorMsg');
+      
+      pinInput.value = '';
+      errorMsg.classList.add('hidden');
+      pinInput.classList.remove('border-rose-500');
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        pinInput.focus();
+      }, 10);
+    }
+
+    function closeAdminResetModal() {
+      const modal = document.getElementById('adminResetModal');
+      modal.classList.add('opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    async function handleAdminResetConfirm() {
+      const pinInput = document.getElementById('adminPinInput');
+      const errorMsg = document.getElementById('pinErrorMsg');
+      const enteredPin = pinInput.value.trim();
+
+      if (enteredPin !== ADMIN_PIN) {
+        errorMsg.classList.remove('hidden');
+        pinInput.classList.add('border-rose-500', 'animate-shake');
+        setTimeout(() => pinInput.classList.remove('animate-shake'), 500);
+        return;
+      }
+
+      errorMsg.classList.add('hidden');
+
+      // Khởi tạo lại trạng thái 15 số ban đầu
+      const initialPool = Array.from({ length: 15 }, (_, i) => i + 1);
+      const initialAssignments = {};
+      for (let i = 1; i <= 15; i++) initialAssignments[i] = null;
+
+      if (isCloudMode && roomDocRef) {
+        try {
+          await setDoc(roomDocRef, {
+            remainingPool: initialPool,
+            assignments: initialAssignments,
+            lastSpin: null,
+            updatedAt: Date.now()
+          });
+          showToast("Đã đặt lại toàn bộ phòng quay thành công!", "info");
+        } catch (err) {
+          console.error("Lỗi khi reset phòng online:", err);
+          showToast("Không thể đặt lại dữ liệu trực tuyến!", "error");
+          return;
+        }
+      } else {
+        remainingPool = initialPool;
+        activeWheelPool = [...initialPool];
+        assignments = initialAssignments;
+        userSpinResult = null;
+        enableSpinForm();
+        updateMemberDropdown();
+        updateRemainingBadge();
+        renderSlotsList();
+        drawWheel();
+        showToast("Đã đặt lại dữ liệu thành công!", "info");
+      }
+
+      userSpinResult = null;
+      enableSpinForm();
+      closeAdminResetModal();
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 75,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function showToast(msg, type = "info") {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      const borderColor = type === 'warning' ? 'border-amber-500/80 bg-amber-950/90 text-amber-200' :
+                          type === 'error' ? 'border-rose-500/80 bg-rose-950/90 text-rose-200' :
+                          'border-indigo-500/80 bg-slate-900/90 text-slate-100';
+
+      toast.className = `border px-4 py-2.5 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-y-3 opacity-0 ${borderColor}`;
+      toast.textContent = msg;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    window.addEventListener('load', () => {
+      // Đảm bảo DOM layout hoàn tất trước khi tính kích thước canvas
+      requestAnimationFrame(() => {
+        resizeCanvas();
+      });
+
+      updateMemberDropdown();
+      renderSlotsList();
+      updateRemainingBadge();
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // Spin triggers
+      document.getElementById('btnCenterSpin').addEventListener('click', startSpin);
+      canvas.addEventListener('click', startSpin);
+
+      document.getElementById('selectName').addEventListener('change', () => {
+        document.getElementById('nameValidationMsg').classList.add('hidden');
+      });
+
+      // Sound toggle
+      document.getElementById('btnSoundToggle').addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+        document.getElementById('soundStatusText').textContent = soundEnabled ? 'Bật' : 'Tắt';
+        if (soundEnabled) initAudio();
+      });
+
+      // Export & Copy
+      document.getElementById('btnCopyList').addEventListener('click', copySchedule);
+      document.getElementById('btnExportExcel').addEventListener('click', exportToExcelCSV);
+
+      // Admin Reset Modal events
+      document.getElementById('btnOpenResetModal').addEventListener('click', openAdminResetModal);
+      document.getElementById('btnCancelReset').addEventListener('click', closeAdminResetModal);
+      document.getElementById('btnConfirmReset').addEventListener('click', handleAdminResetConfirm);
+      document.getElementById('adminPinInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleAdminResetConfirm();
+      });
+      document.getElementById('adminResetModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('adminResetModal')) closeAdminResetModal();
+      });
+
+      // Modals
+      document.getElementById('btnCloseResultModal').addEventListener('click', closeResultModal);
+
+      document.getElementById('resultModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('resultModal')) closeResultModal();
+      });
+
+      // Start Cloud Sync
+      initializeCloudSync();
+    });
+  </script>
+</body>
+</html>
